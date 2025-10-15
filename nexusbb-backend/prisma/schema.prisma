@@ -1,0 +1,92 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(uuid())
+  name        String
+  email       String   @unique
+  password    String
+  role        Role
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  warehouseId String?
+  warehouse   Warehouse? @relation(fields: [warehouseId], references: [id])
+  requests    Request[]
+}
+
+model Warehouse {
+  id        String      @id @default(uuid())
+  name      String      @unique
+  city      String
+  type      WarehouseType
+  users     User[]
+  inventory Inventory[]
+  requests  Request[]
+}
+
+model Product {
+  id          String      @id @default(uuid())
+  sku         String      @unique @map("SKU")
+  name        String      @map("NOME_PRODUTO")
+  description String?
+  category    String?     @map("CATEGORIA")
+  inventory   Inventory[]
+}
+
+model Inventory {
+  id            String    @id @default(uuid())
+  quantity      Int       @map("QUANTIDADE")
+  criticalLevel Int       @default(10)
+  productId     String
+  warehouseId   String
+  product       Product   @relation(fields: [productId], references: [id])
+  warehouse     Warehouse @relation(fields: [warehouseId], references: [id])
+
+  @@unique([productId, warehouseId])
+}
+
+model Request {
+  id                String   @id @default(uuid())
+  type              RequestType
+  status            RequestStatus @default(PENDING)
+  justification     String?
+  products          Json     // Ex: [{"productId": "uuid", "quantity": 10}]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  requesterId       String
+  originWarehouseId String
+  requester         User     @relation(fields: [requesterId], references: [id])
+  originWarehouse   Warehouse @relation(fields: [originWarehouseId], references: [id])
+}
+
+enum Role {
+  CENTRAL_MANAGER
+  SATELLITE_OPERATOR
+}
+
+enum WarehouseType {
+  CENTRAL
+  SATELLITE
+}
+
+enum RequestType {
+  STOCK_REQUEST
+  REPAIR_REQUEST
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  DENIED
+  IN_TRANSIT
+  COMPLETED
+}
