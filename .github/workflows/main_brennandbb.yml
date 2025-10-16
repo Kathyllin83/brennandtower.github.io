@@ -4,28 +4,31 @@ on:
   push:
     paths:
       - 'backend/**'
+    branches:
+      - main
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
-    - uses: actions/checkout@v3
+      - name: Checkout código
+        uses: actions/checkout@v3
 
-    - name: Set up Node
-      uses: actions/setup-node@v3
-      with:
-        node-version: 18
+      - name: Configurar Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
 
-    - name: Install dependencies & build
-      working-directory: ./backend
-      run: |
-        npm install
-        npm run build  # se você tiver build step
+      - name: Instalar dependências e build
+        working-directory: ./backend
+        run: |
+          npm install
+          npm run build --if-present
 
-    - name: Deploy to Azure WebApp
-      uses: azure/webapps-deploy@v2
-      with:
-        app-name: nexus-backend
-        slot-name: production
-        publish-profile: ${{ secrets.AZURE_BACKEND_PUBLISH_PROFILE }}
-        package: ./backend
+      - name: Deploy no Azure Web App
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: brennandbb
+          publish-profile: ${{ secrets.AZURE_BACKEND_PUBLISH_PROFILE }}
+          package: ./backend
