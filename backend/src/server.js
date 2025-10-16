@@ -64,7 +64,40 @@ db.sync({ force: true })
 
   })
   .then(() => {
-    app.listen(PORT, () => {
+    // Health (bate com o HEALTHCHECK do Dockerfile)
+    app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
+    // === SERVIR FRONTEND (Vite) ===
+    const frontendDist = path.resolve(__dirname, '../../frontend/dist');
+    const indexHtml = path.join(frontendDist, 'index.html');
+
+    console.log('[STATIC] Tentando servir:', frontendDist);
+    console.log('[STATIC] index.html existe?', fs.existsSync(indexHtml));
+
+    // 1) Confere se o build existe dentro do container
+    if (!fs.existsSync(frontendDist)) {
+      console.error('[STATIC] Pasta dist NÃO encontrada. Verifique build do Vite e Dockerfile COPY.');
+    }
+    if (!fs.existsSync(indexHtml)) {
+      console.error('[STATIC] index.html NÃO encontrado em dist. O build realmente rodou?');
+    }
+
+    // 2) Rotas de API já estão montadas em ./app (antes do static)
+    app.use(express.static(frontendDist));
+
+    // 3) Rota raiz explícita (ajuda a depurar)
+    app.get('/', (req, res) => {
+      if (fs.existsSync(indexHtml)) return res.sendFile(indexHtml);
+      return res.status(500).send('index.html não encontrado em /frontend/dist');
+    });
+
+    // 4) Fallback SPA para rotas do React (DEPOIS das rotas /api)
+    app.get('*', (req, res) => {
+      res.sendFile(indexHtml);
+    });
+
+    // 5) Escutar em 0.0.0.0 no Docker
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`Server is running on port ${PORT}`);
     });
   })

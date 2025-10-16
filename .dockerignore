@@ -1,0 +1,56 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+*.md
+
+# Node modules (will be installed during build)
+node_modules
+*/node_modules
+
+# Frontend build files (will be built during Docker build)
+frontend/dist
+
+# Backend database files
+backend/database/*.sqlite
+backend/database/*.db
+
+# Environment files
+.env
+.env.local
+.env.production
+backend/.env*
+frontend/.env*
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage
+
+# IDE files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
