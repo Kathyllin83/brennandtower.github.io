@@ -35,10 +35,12 @@ const OrderDetail = () => {
             <p><strong>Tipo:</strong> {order.type}</p>
             <p><strong>Status:</strong> 
               <span className={`font-semibold px-2 py-1 rounded-full text-sm ml-2 ${{
-                'Aberto': 'bg-blue-200 text-blue-800',
+                'Pendente': 'bg-gray-200 text-gray-800',
+                'Aprovado': 'bg-green-200 text-green-800',
+                'Recusado': 'bg-red-200 text-red-800',
                 'Em Andamento': 'bg-yellow-200 text-yellow-800',
-                'Entregue': 'bg-green-200 text-green-800',
-                'Encerrado': 'bg-gray-200 text-gray-800',
+                'Entregue': 'bg-blue-200 text-blue-800',
+                'Encerrado': 'bg-purple-200 text-purple-800',
               }[order.status]}`}>
                 {order.status}
               </span>
@@ -61,10 +63,20 @@ const OrderDetail = () => {
           </div>
         )}
 
-        {order.status === 'Aberto' && (
+        {order.status === 'Pendente' && (
           <div className="mt-8 border-t pt-6 flex justify-end gap-4">
-            <button onClick={() => handleUpdateStatus('Encerrado')} className="px-6 py-2 bg-red-600 text-white rounded-md shadow-md hover:bg-red-700">Recusar Pedido</button>
-            <button onClick={() => handleUpdateStatus('Em Andamento')} className="px-6 py-2 bg-green-600 text-white rounded-md shadow-md hover:bg-green-700">Aceitar Pedido</button>
+            <button onClick={() => handleUpdateStatus('Recusado')} className="px-6 py-2 bg-red-600 text-white rounded-md shadow-md hover:bg-red-700">Recusar Pedido</button>
+            <button onClick={() => handleUpdateStatus('Aprovado')} className="px-6 py-2 bg-green-600 text-white rounded-md shadow-md hover:bg-green-700">Aceitar Pedido</button>
+          </div>
+        )}
+        {order.status === 'Aprovado' && (
+          <div className="mt-8 border-t pt-6 flex justify-end gap-4">
+            <button onClick={() => handleUpdateStatus('Em Andamento')} className="px-6 py-2 bg-yellow-600 text-white rounded-md shadow-md hover:bg-yellow-700">Iniciar Andamento</button>
+          </div>
+        )}
+        {order.status === 'Em Andamento' && (
+          <div className="mt-8 border-t pt-6 flex justify-end gap-4">
+            <button onClick={() => handleUpdateStatus('Entregue')} className="px-6 py-2 bg-blue-600 text-white rounded-md shadow-md hover:bg-blue-700">Marcar como Entregue</button>
           </div>
         )}
       </div>

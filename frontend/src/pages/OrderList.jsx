@@ -35,13 +35,18 @@ const OrderList = () => {
       </div>
 
       {/* Filtros */}
-      <div className="flex justify-between items-center mb-6 bg-white p-4 rounded-lg shadow-md">
+      <div className="flex flex-wrap gap-2 items-center mb-6 bg-white p-4 rounded-lg shadow-md">
         <div>
           <label className="mr-2 font-semibold">Filtrar por tipo:</label>
           <button onClick={() => setFilterType('')} className={`px-4 py-2 rounded-md mr-2 ${!filterType ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>
             Todos
           </button>
-          {/* ... other filter buttons */}
+          <button onClick={() => setFilterType('Requisição')} className={`px-4 py-2 rounded-md mr-2 ${filterType === 'Requisição' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>
+            Requisição
+          </button>
+          <button onClick={() => setFilterType('Reparo')} className={`px-4 py-2 rounded-md ${filterType === 'Reparo' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>
+            Reparo
+          </button>
         </div>
       </div>
 
@@ -66,20 +71,28 @@ const OrderList = () => {
                   <td className="py-3 px-4">{order.item?.name || 'N/A'}</td>
                   <td className="py-3 px-4">
                     <span className={`px-2 py-1 rounded-full text-sm font-semibold ${{
-                      'Aberto': 'bg-blue-200 text-blue-800',
+                      'Pendente': 'bg-gray-200 text-gray-800',
+                      'Aprovado': 'bg-green-200 text-green-800',
+                      'Recusado': 'bg-red-200 text-red-800',
                       'Em Andamento': 'bg-yellow-200 text-yellow-800',
-                      'Entregue': 'bg-green-200 text-green-800',
-                      'Encerrado': 'bg-gray-200 text-gray-800',
+                      'Entregue': 'bg-blue-200 text-blue-800',
+                      'Encerrado': 'bg-purple-200 text-purple-800',
                     }[order.status] || 'bg-gray-200'}`}>
                       {order.status}
                     </span>
                   </td>
                   <td className="py-3 px-4">
-                    {order.status === 'Aberto' && (
+                    {order.status === 'Pendente' && (
                       <div className="flex gap-2">
-                        <button onClick={() => handleUpdateStatus(order.id, 'Em Andamento')} className="text-sm bg-green-500 text-white px-3 py-1 rounded-md">Aceitar</button>
-                        <button onClick={() => handleUpdateStatus(order.id, 'Encerrado')} className="text-sm bg-red-500 text-white px-3 py-1 rounded-md">Recusar</button>
+                        <button onClick={() => handleUpdateStatus(order.id, 'Aprovado')} className="text-sm bg-green-500 text-white px-3 py-1 rounded-md">Aprovar</button>
+                        <button onClick={() => handleUpdateStatus(order.id, 'Recusado')} className="text-sm bg-red-500 text-white px-3 py-1 rounded-md">Recusar</button>
                       </div>
+                    )}
+                    {order.status === 'Aprovado' && (
+                      <button onClick={() => handleUpdateStatus(order.id, 'Em Andamento')} className="text-sm bg-yellow-500 text-white px-3 py-1 rounded-md">Em Andamento</button>
+                    )}
+                    {order.status === 'Em Andamento' && (
+                      <button onClick={() => handleUpdateStatus(order.id, 'Entregue')} className="text-sm bg-blue-500 text-white px-3 py-1 rounded-md">Entregue</button>
                     )}
                   </td>
                 </tr>

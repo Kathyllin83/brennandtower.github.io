@@ -1,35 +1,48 @@
-const { Order, Item, Warehouse } = require('../models').models;
+const { Order, Item, Warehouse, WarehouseWeight } = require('../models').models;
 const { Op, fn, col, literal } = require('sequelize');
+const { subMonths } = require('date-fns');
 
 module.exports = {
   async getMetrics(req, res) {
-    const { timePeriod = '3m' } = req.query;
+    const { timePeriod = '3m', warehouseId, itemId } = req.query;
 
     const months = timePeriod === '6m' ? 6 : 3;
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - months);
 
     try {
-      // 1. Weighted Sales Average
-      const weights = { '1': 1, '2': 3, '3': 2 }; // Brasília, Recife, Curitiba
-      const totalWeights = 6;
+      const weightsData = await WarehouseWeight.findAll();
+      const weights = weightsData.reduce((acc, ww) => {
+        acc[ww.warehouseId] = ww.weight;
+        return acc;
+      }, {});
+
+      let totalWeights = 0;
       let weightedSalesSum = 0;
 
-      for (const warehouseId in weights) {
-        const sales = await Order.sum('quantity', {
-          where: {
-            type: 'Requisição',
-            originWarehouseId: warehouseId,
-            createdAt: { [Op.gte]: startDate },
-          }
-        });
-        weightedSalesSum += (sales || 0) * weights[warehouseId];
-      }
-      const weightedSalesAverage = weightedSalesSum / totalWeights / months;
+      const warehousesToIterate = warehouseId ? { [warehouseId]: weights[warehouseId] || 1 } : weights;
 
-      // 2. Restock Recommendation
+      for (const whId in warehousesToIterate) {
+        const whereClause = {
+          type: 'Requisição',
+          originWarehouseId: whId,
+          createdAt: { [Op.gte]: startDate },
+        };
+        if (itemId) whereClause.itemId = itemId;
+
+        const sales = await Order.sum('quantity', { where: whereClause });
+        const weight = weights[whId] || 1;
+        weightedSalesSum += (sales || 0) * weight;
+        totalWeights += weight;
+      }
+      const weightedSalesAverage = totalWeights > 0 ? weightedSalesSum / totalWeights / months : 0;
+
       const TARGET_STOCK_LEVEL = 100;
-      const allItems = await Item.findAll();
+      const itemWhereClause = {};
+      if (warehouseId) itemWhereClause.warehouseId = warehouseId;
+      if (itemId) itemWhereClause.id = itemId;
+
+      const allItems = await Item.findAll({ where: itemWhereClause });
       const restockList = [];
       allItems.forEach(item => {
         if (item.quantity < TARGET_STOCK_LEVEL) {
@@ -40,9 +53,15 @@ module.exports = {
         }
       });
 
-      // 3. Top Items (preserved logic)
+      const topItemsWhereClause = {
+        type: 'Requisição',
+        createdAt: { [Op.gte]: startDate },
+      };
+      if (warehouseId) topItemsWhereClause.originWarehouseId = warehouseId;
+      if (itemId) topItemsWhereClause.itemId = itemId;
+
       const topItems = await Order.findAll({
-        where: { type: 'Requisição', createdAt: { [Op.gte]: startDate } },
+        where: topItemsWhereClause,
         attributes: [[fn('COUNT', col('itemId')), 'count']],
         include: [{ model: Item, as: 'item', attributes: ['name'] }],
         group: ['itemId', 'item.id', 'item.name'],
@@ -61,33 +80,65 @@ module.exports = {
 
   async getPrediction(req, res) {
     try {
-      // Find top requested item in the last 3 months
-      const topItemOrder = await Order.findOne({
-        where: { type: 'Requisição', createdAt: { [Op.gte]: new Date(new Date().setMonth(new Date().getMonth() - 3)) } },
-        attributes: [[fn('COUNT', col('itemId')), 'count']],
-        group: ['itemId'],
-        order: [[literal('count'), 'DESC']],
+      const { timePeriod = '3m', warehouseId, itemId } = req.query;
+      const months = timePeriod === '6m' ? 6 : 3;
+  
+      const currentDate = new Date();
+      const currentPeriodStart = subMonths(currentDate, months);
+      const previousPeriodStart = subMonths(currentDate, months * 2);
+      const previousPeriodEnd = currentPeriodStart;
+  
+      const topItemResult = await Order.findOne({
+        attributes: [
+          'itemId',
+          [fn('COUNT', col('Order.id')), 'orderCount']
+        ],
+        where: {
+          type: 'Requisição',
+          createdAt: { [Op.between]: [currentPeriodStart, currentDate] },
+          ...(warehouseId && { destinationWarehouseId: warehouseId }),
+          ...(itemId && { itemId: itemId }),
+        },
+        include: [{ model: Item, as: 'item', attributes: ['name', 'quantity'] }],
+        group: ['itemId', 'item.id', 'item.name', 'item.quantity'],
+        order: [[literal('orderCount'), 'DESC']],
       });
-
-      if (!topItemOrder) {
-        return res.json({ prediction: 'Não há dados de requisições suficientes para gerar uma predição.' });
+  
+      if (!topItemResult) {
+        return res.json({ prediction: "Não há dados de requisições suficientes para gerar uma recomendação." });
       }
+  
+      const topItemId = topItemResult.get('itemId');
+      const topItemName = topItemResult.item.name;
+      const currentCount = parseInt(topItemResult.get('orderCount'), 10);
+      
+      const previousCountResult = await Order.count({
+        where: {
+          itemId: topItemId,
+          type: 'Requisição',
+          createdAt: { [Op.between]: [previousPeriodStart, previousPeriodEnd] },
+          ...(warehouseId && { destinationWarehouseId: warehouseId }),
+        },
+      });
+  
+      let prediction = '';
 
-      const topItemId = topItemOrder.get('itemId');
-      const topItem = await Item.findByPk(topItemId);
-
-      if (!topItem) {
-        return res.json({ prediction: 'Análise de estoque em andamento.' });
-      }
-
-      // Simple prediction logic
-      if (topItem.quantity < 20) {
-        const recommendationQty = 100 - topItem.quantity;
-        return res.json({ prediction: `O item '${topItem.name}' é o mais requisitado e está com estoque baixo (${topItem.quantity} un.). Considere comprar ${recommendationQty} novas unidades.` });
+      if (previousCountResult === 0 && currentCount > 5) {
+        const quantityToBuy = Math.ceil(currentCount * 2);
+        prediction = `O item "${topItemName}" é uma novidade com alta demanda (${currentCount} requisições). Considere fazer uma compra inicial de ${quantityToBuy} unidades para suprir a necessidade.`;
+      
+      } else if (previousCountResult > 0 && currentCount > previousCountResult) {
+        const percentageIncrease = ((currentCount - previousCountResult) / previousCountResult) * 100;
+        const quantityToBuy = Math.ceil(currentCount * 1.2);
+        prediction = `A demanda pelo item "${topItemName}" aumentou ${percentageIncrease.toFixed(0)}% nos últimos ${months} meses. Com base nesta performance, uma compra estratégica de ${quantityToBuy} unidades é uma sugestão viável para antecipar a demanda futura.`;
+      
       } else {
-        return res.json({ prediction: `O item mais requisitado, '${topItem.name}', está com estoque saudável. Nenhuma ação é necessária no momento.` });
+        const quantityToBuy = Math.ceil(currentCount * 1.1);
+        prediction = `O item "${topItemName}" mantém uma performance de vendas forte e consistente. Para capitalizar sobre essa demanda sólida, uma compra de ${quantityToBuy} unidades pode garantir a continuidade do atendimento e preparar o estoque para picos de mercado.`;
       }
-
+      
+      return res.json({ prediction });
+  
     } catch (error) {
       console.error(error);
       return res.status(500).json({ error: 'Failed to generate prediction.' });

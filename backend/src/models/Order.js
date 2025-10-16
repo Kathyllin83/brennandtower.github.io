@@ -5,7 +5,7 @@ class Order extends Model {
     super.init({
       type: DataTypes.ENUM('Requisição', 'Reparo'),
       quantity: DataTypes.INTEGER,
-      status: DataTypes.ENUM('Aberto', 'Em Andamento', 'Entregue', 'Encerrado'),
+      status: DataTypes.ENUM('Pendente', 'Aprovado', 'Recusado', 'Em Andamento', 'Entregue', 'Encerrado'),
       observation: DataTypes.TEXT,
     }, {
       sequelize

@@ -20,7 +20,7 @@ const ItemModal = ({ item, warehouses, onClose, onSave }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-20">
-      <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+      <div className="bg-white p-8 rounded-lg shadow-xl w-11/12 max-w-md mx-auto">
         <h2 className="text-2xl font-bold mb-6">{item ? 'Editar Item' : 'Adicionar Item'}</h2>
         <form onSubmit={handleSubmit}>
           {/* Form fields ... */}

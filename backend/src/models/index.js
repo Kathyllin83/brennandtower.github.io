@@ -4,6 +4,7 @@ const dbConfig = require('../config/database');
 const Warehouse = require('./Warehouse');
 const Item = require('./Item');
 const Order = require('./Order');
+const WarehouseWeight = require('./WarehouseWeight');
 
 const connection = new Sequelize(dbConfig);
 
@@ -11,10 +12,12 @@ const connection = new Sequelize(dbConfig);
 Warehouse.init(connection);
 Item.init(connection);
 Order.init(connection);
+WarehouseWeight.init(connection);
 
 // Initialize associations
 Warehouse.associate(connection.models);
 Item.associate(connection.models);
 Order.associate(connection.models);
+WarehouseWeight.associate(connection.models);
 
 module.exports = connection;

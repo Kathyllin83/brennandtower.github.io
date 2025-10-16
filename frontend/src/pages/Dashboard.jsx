@@ -15,7 +15,7 @@ const Dashboard = () => {
   useEffect(() => {
     api.get('/items').then(res => setItems(res.data));
     api.get('/items/low-stock').then(res => setLowStockItems(res.data));
-    api.get('/orders?status=Aberto&sort=asc').then(res => setOldestOpenOrders(res.data.slice(0, 5)));
+    api.get('/orders?status=Pendente&sort=asc').then(res => setOldestOpenOrders(res.data.slice(0, 5)));
     setWarehouses([ { id: 1, name: 'Central' }, { id: 2, name: 'Recife' }, { id: 3, name: 'Curitiba' } ]);
   }, []);
 
@@ -29,14 +29,26 @@ const Dashboard = () => {
           api.get(`/dashboard/prediction?${params}`)
         ]);
         setMetrics(metricsRes.data);
+        console.log('Prediction response:', predictionRes.data);
         setPrediction(predictionRes.data.prediction);
       } catch (error) {
         console.error("Erro ao buscar dados do dashboard:", error);
+        setPrediction('Não foi possível carregar a sugestão.');
       }
       setLoading(false);
     };
     fetchDashboardData();
   }, [filters]);
+
+  const handleUpdateOrderStatus = async (orderId, newStatus) => {
+    try {
+      await api.put(`/orders/${orderId}`, { status: newStatus });
+      setOldestOpenOrders(prevOrders => prevOrders.filter(order => order.id !== orderId));
+    } catch (error) {
+      console.error(`Erro ao atualizar status do pedido ${orderId}:`, error);
+      alert('Erro ao atualizar status do pedido.');
+    }
+  };
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -51,7 +63,7 @@ const Dashboard = () => {
       {lowStockItems.length > 0 && (
         <div className="mb-8">
           <h2 className="text-2xl font-bold mb-4">Avisos de Estoque</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {lowStockItems.map(item => {
               const isCritical = item.status === 'Crítico' || item.quantity === 0;
               return (
@@ -73,7 +85,7 @@ const Dashboard = () => {
       )}
 
       <h2 className="text-2xl font-bold mb-4 mt-8">Métricas Interativas</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 bg-white p-4 rounded-lg shadow-md">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8 bg-white p-4 rounded-lg shadow-md">
         <select name="timePeriod" value={filters.timePeriod} onChange={handleFilterChange} className="p-2 border rounded-md">
           <option value="3m">Últimos 3 meses</option>
           <option value="6m">Últimos 6 meses</option>
@@ -90,7 +102,7 @@ const Dashboard = () => {
 
       {loading ? <p>Carregando métricas...</p> : (metrics && metrics.weightedSalesAverage != null) ? (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             <div className="bg-white p-6 rounded-lg shadow-md">
               <h3 className="font-bold text-lg mb-2">Média Ponderada de Saídas</h3>
               <p className="text-3xl text-blue-600">{metrics.weightedSalesAverage.toFixed(2)} <span className="text-lg">/ mês</span></p>
@@ -117,7 +129,7 @@ const Dashboard = () => {
             <span className="text-3xl">💡</span>
             <div>
               <h3 className="font-bold text-lg mb-1">Recomendação Preditiva</h3>
-              <p>{prediction}</p>
+              {loading ? <p>Carregando...</p> : <p>{prediction}</p>}
             </div>
           </div>
         </>
@@ -145,7 +157,18 @@ const Dashboard = () => {
                     <td className="py-3 px-4">{order.originWarehouse?.name || 'N/A'}</td>
                     <td className="py-3 px-4">{order.item?.name}</td>
                     <td className="py-3 px-4">
-                      <Link to={`/orders/${order.id}`} className="bg-blue-500 text-white px-3 py-1 rounded-md text-sm">Detalhes</Link>
+                      <button
+                        onClick={() => handleUpdateOrderStatus(order.id, 'Aprovado')}
+                        className="bg-green-500 text-white px-3 py-1 rounded-md text-sm mr-2"
+                      >
+                        Aprovar
+                      </button>
+                      <button
+                        onClick={() => handleUpdateOrderStatus(order.id, 'Recusado')}
+                        className="bg-red-500 text-white px-3 py-1 rounded-md text-sm"
+                      >
+                        Recusar
+                      </button>
                     </td>
                   </tr>
                 ))}

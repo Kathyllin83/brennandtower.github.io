@@ -46,13 +46,11 @@ module.exports = {
   async store(req, res) {
     const { type, originWarehouseId, destinationWarehouseId, itemId, quantity, observation } = req.body;
 
-    // Business Rule: Satellite-to-satellite requests must go through Central.
-    if (type === 'Requisição') {
-      const originIsSatellite = originWarehouseId && originWarehouseId !== 1;
-      const destIsSatellite = destinationWarehouseId && destinationWarehouseId !== 1;
-      if (originIsSatellite && destIsSatellite) {
-        return res.status(400).json({ error: 'Requisições entre depósitos satélites devem ser direcionadas para a Central.' });
-      }
+    // Validate destination based on origin
+    if (originWarehouseId !== 1) { // Origin is a satellite
+        if (destinationWarehouseId !== 1) {
+            return res.status(400).json({ error: 'Requisições de depósitos satélites devem ser direcionadas para a Central.' });
+        }
     }
 
 
@@ -60,7 +58,7 @@ module.exports = {
       const order = await Order.create({
         type,
         originWarehouseId,
-        destinationWarehouseId,
+        destinationWarehouseId: destinationWarehouseId || null,
         itemId,
         quantity,
         observation,

@@ -14,6 +14,7 @@ const NewOrder = () => {
     quantity: 1,
     observation: ''
   });
+  const [isCentralOrigin, setIsCentralOrigin] = useState(false);
 
   useEffect(() => {
     api.get('/items').then(res => setItems(res.data));
@@ -27,6 +28,9 @@ const NewOrder = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'originWarehouseId') {
+      setIsCentralOrigin(value == 1);
+    }
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -35,7 +39,7 @@ const NewOrder = () => {
     const payload = {
       type: orderType,
       ...formData,
-      status: 'Aberto',
+      status: 'Pendente',
     };
     api.post('/orders', payload)
       .then(() => {
@@ -75,8 +79,9 @@ const NewOrder = () => {
             
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">Depósito de Destino</label>
-              <select name="destinationWarehouseId" value={formData.destinationWarehouseId} onChange={handleChange} className="mt-1 block w-full p-2 border-gray-300 rounded-md shadow-sm" required>
+              <select name="destinationWarehouseId" value={formData.destinationWarehouseId} onChange={handleChange} className="mt-1 block w-full p-2 border-gray-300 rounded-md shadow-sm" required={!isCentralOrigin}>
                 <option value="">Selecione</option>
+                {isCentralOrigin && <option value="">Fornecedor Externo</option>}
                 {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
               </select>
             </div>
