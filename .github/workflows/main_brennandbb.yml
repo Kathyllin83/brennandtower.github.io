@@ -1,34 +1,52 @@
+# Nome do workflow que aparecerá na aba "Actions" do GitHub
 name: 🚀 Deploy Backend to Azure Web App
 
+# Define o gatilho (trigger) para este workflow
 on:
+  # Executa sempre que houver um push na branch 'main'
   push:
     branches:
       - main
+    # Mas SOMENTE se os arquivos alterados estiverem dentro da pasta 'backend'
     paths:
       - 'backend/**'
 
 jobs:
+  # Nome do job
   build-and-deploy:
+    name:  Buid e Deploy do Backend
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Baixa o código do seu repositório para a máquina virtual
       - name: 🔄 Checkout código
         uses: actions/checkout@v3
 
+      # 2. Configura o ambiente Node.js na versão 18
       - name: ⚙️ Configurar Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
 
+      # 3. Instala as dependências e executa o build (se houver)
+      # A diretiva 'working-directory' garante que os comandos rodem dentro da pasta /backend
       - name: 📦 Instalar dependências e build
         working-directory: ./backend
         run: |
+          # 'npm ci' é mais rápido e seguro para CI/CD do que 'npm install'
           npm ci
+          # Executa o script de 'build' apenas se ele existir no seu package.json
           npm run build --if-present
 
+      # 4. Faz o deploy para o Azure Web App
+      # Este passo usa o perfil de publicação para se autenticar e enviar os arquivos
       - name: 🚀 Deploy no Azure Web App
         uses: azure/webapps-deploy@v2
         with:
+          # O nome do seu App Service no Azure
           app-name: brennandbb
+          # O segredo contendo o seu perfil de publicação. ESTE É O PASSO CRÍTICO.
           publish-profile: ${{ secrets.AZURE_BACKEND_PUBLISH_PROFILE }}
+          # O caminho para a pasta que contém o código a ser enviado.
+          # Como os passos anteriores rodaram em './backend', esta é a pasta correta.
           package: ./backend
