@@ -1,0 +1,16 @@
+
+[
+  {
+    "id": "r1a2b3c4-d5e6-f789-0123-456789abcdef",
+    "status": "COMPLETED",
+    "createdAt": "2025-09-15T10:00:00.000Z",
+    "products": [
+      {
+        "productId": "p1a2b3c4-d5e6-f789-0123-456789abcdef",
+        "quantity": 10,
+        "value": 150.75,
+        "supplier": "Fornecedor X"
+      }
+    ]
+  }
+]

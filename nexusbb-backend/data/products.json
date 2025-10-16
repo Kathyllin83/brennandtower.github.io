@@ -1,0 +1,7 @@
+[
+  { "id": "prod-001", "productCode": "TEC-GAMER-01", "name": "Teclado Gamer RGB", "supplier": "Fornecedor Gamer" },
+  { "id": "prod-002", "productCode": "MOU-LOGI-02", "name": "Mouse Logitech MX", "supplier": "Fornecedor Office" },
+  { "id": "prod-003", "productCode": "MON-DELL-27", "name": "Monitor Dell 27\"", "supplier": "Fornecedor Dell" },
+  { "id": "prod-004", "productCode": "SSD-KING-1T", "name": "SSD Kingston 1TB", "supplier": "Fornecedor Kingston" },
+  { "id": "prod-005", "productCode": "RAM-CORS-16", "name": "Memoria RAM Corsair 16GB", "supplier": "Fornecedor Corsair" }
+]

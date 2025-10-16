@@ -1,76 +1,69 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const prisma = require('../config/prisma');
+const { v4: uuidv4 } = require('uuid');
+const db = require('../services/jsonDbService');
 
-/**
- * @route   POST /api/auth/register
- * @desc    Register a new user (only for CENTRAL_MANAGER)
- * @access  Private (CENTRAL_MANAGER)
- */
 exports.register = async (req, res) => {
   const { name, email, password, role, warehouseId } = req.body;
 
   try {
-    // Check if user already exists
-    let user = await prisma.user.findUnique({ where: { email } });
-    if (user) {
+    const users = await db.readData('users');
+    const existingUser = users.find((u) => u.email === email);
+
+    if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create user
-    user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        role,
-        warehouseId,
-      },
-    });
+    const newUser = {
+      id: uuidv4(),
+      name,
+      email,
+      password: hashedPassword,
+      role,
+      warehouseId,
+    };
 
-    res.status(201).json({ message: 'User registered successfully', userId: user.id });
+    users.push(newUser);
+    await db.writeData('users', users);
+
+    res.status(201).json({ message: 'User registered successfully', userId: newUser.id });
   } catch (error) {
     console.error(error.message);
     res.status(500).send('Server error');
   }
 };
 
-/**
- * @route   POST /api/auth/login
- * @desc    Authenticate user and get token
- * @access  Public
- */
 exports.login = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    // Check if user exists
-    const user = await prisma.user.findUnique({ where: { email } });
+    const users = await db.readData('users');
+    const user = users.find((u) => u.email === email);
+
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // Check password
     const isMatch = await bcrypt.compare(password, user.password);
+
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // Create JWT payload
     const payload = {
-      userId: user.id,
-      role: user.role,
-      warehouseId: user.warehouseId,
+      user: {
+        id: user.id,
+        role: user.role,
+        warehouseId: user.warehouseId,
+      },
     };
 
-    // Sign token
     jwt.sign(
       payload,
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || 'your_jwt_secret',
       { expiresIn: '24h' },
       (err, token) => {
         if (err) throw err;

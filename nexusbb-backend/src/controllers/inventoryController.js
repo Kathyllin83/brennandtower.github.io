@@ -1,92 +1,139 @@
-const prisma = require('../config/prisma');
+const fs = require('fs');
+const path = require('path');
+const csv = require('csv-parser');
+const { readData, writeData } = require('../services/jsonDbService');
 
-/**
- * @route   GET /api/inventory/warehouse/:warehouseId
- * @desc    Get inventory for a specific warehouse
- * @access  Private (All roles)
- */
-exports.getWarehouseInventory = async (req, res) => {
-  const { warehouseId } = req.params;
-  const { user } = req;
+const uploadCsv = (req, res) => {
+  if (!req.file) {
+    return res.status(400).send('No file uploaded.');
+  }
 
-  try {
-    // Security check: Satellite operators can only see their own warehouse inventory
-    if (user.role === 'SATELLITE_OPERATOR' && user.warehouseId !== warehouseId) {
-      return res.status(403).json({ message: 'Forbidden: You can only access your own warehouse inventory' });
-    }
+  const results = [];
+  const filePath = req.file.path;
 
-    const inventory = await prisma.inventory.findMany({
-      where: { warehouseId },
-      include: { product: true, warehouse: true },
+  fs.createReadStream(filePath)
+    .pipe(csv())
+    .on('data', (data) => results.push(data))
+    .on('end', () => {
+      try {
+        const products = readData('products.json');
+        const warehouses = readData('warehouses.json');
+        const inventory = readData('inventory.json');
+
+        results.forEach(row => {
+          const { productCode, warehouseName, quantity, value, supplier } = row;
+
+          // Find or create product
+          let product = products.find(p => p.productCode === productCode);
+          if (!product) {
+            product = {
+              id: `prod-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              productCode,
+              name: `New Product ${productCode}`, // Placeholder name
+              supplier,
+            };
+            products.push(product);
+          } else if (supplier) {
+            product.supplier = supplier;
+          }
+
+          // Find warehouse
+          const warehouse = warehouses.find(w => w.name.toLowerCase() === warehouseName.toLowerCase());
+          if (!warehouse) {
+            console.warn(`Warehouse not found for name: ${warehouseName}`);
+            return; // Skip this row
+          }
+
+          // Find or create inventory entry
+          let inventoryEntry = inventory.find(
+            inv => inv.productId === product.id && inv.warehouseId === warehouse.id
+          );
+
+          if (inventoryEntry) {
+            inventoryEntry.quantity = parseInt(inventoryEntry.quantity) + parseInt(quantity);
+            inventoryEntry.value = parseFloat(value);
+          } else {
+            inventoryEntry = {
+              id: `inv-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              productId: product.id,
+              warehouseId: warehouse.id,
+              quantity: parseInt(quantity),
+              value: parseFloat(value),
+            };
+            inventory.push(inventoryEntry);
+          }
+        });
+
+        writeData('products.json', products);
+        writeData('warehouses.json', warehouses);
+        writeData('inventory.json', inventory);
+
+        fs.unlinkSync(filePath); // Clean up uploaded file
+
+        res.status(200).send({ message: 'CSV data processed and inventory updated successfully.' });
+      } catch (error) {
+        console.error('Error processing CSV data:', error);
+        res.status(500).send('Error processing CSV data.');
+      }
     });
+};
 
-    if (!inventory) {
-      return res.status(404).json({ message: 'Inventory not found for this warehouse' });
-    }
+const getInventoryByWarehouse = (req, res) => {
+  try {
+    const { warehouseId } = req.params;
+    const inventory = readData('inventory.json');
+    const products = readData('products.json');
 
-    res.json(inventory);
+    const warehouseInventory = inventory
+      .filter(item => item.warehouseId === warehouseId)
+      .map(item => {
+        const product = products.find(p => p.id === item.productId);
+        return {
+          ...item,
+          productName: product ? product.name : 'Unknown Product',
+          productCode: product ? product.productCode : 'N/A',
+        };
+      });
+
+    res.status(200).json(warehouseInventory);
   } catch (error) {
-    console.error(error.message);
-    res.status(500).send('Server error');
+    console.error('Error getting inventory by warehouse:', error);
+    res.status(500).send('Error retrieving inventory data.');
   }
 };
 
-/**
- * @route   GET /api/inventory/alerts/critical
- * @desc    Get all items with quantity below or at critical level
- * @access  Private (CENTRAL_MANAGER)
- */
-exports.getCriticalStockAlerts = async (req, res) => {
-  try {
-    const criticalItems = await prisma.inventory.findMany({
-      where: {
-        quantity: {
-          lte: prisma.inventory.fields.criticalLevel, // This is a pseudo-code way to express the idea.
-                                                      // Prisma requires a raw query or a different approach for this.
-        },
-      },
-      include: { product: true, warehouse: true },
-    });
-    
-    // Correct way to compare two fields in Prisma
-    const items = await prisma.$queryRaw`
-      SELECT * FROM "Inventory" i
-      LEFT JOIN "Product" p ON i."productId" = p.id
-      LEFT JOIN "Warehouse" w ON i."warehouseId" = w.id
-      WHERE i."QUANTIDADE" <= i."criticalLevel";
-    `
+const getInventoryStatus = (req, res) => {
+    try {
+        const inventory = readData('inventory.json');
+        const products = readData('products.json');
 
-    res.json(items);
-  } catch (error) {
-    console.error(error.message);
-    res.status(500).send('Server error');
-  }
+        const inventoryWithStatus = inventory.map(item => {
+            const percentage = (item.currentStock / item.initialStock) * 100;
+            let status = 'Normal';
+            if (item.currentStock === 0) {
+                status = 'Crítico';
+            } else if (percentage <= 20) {
+                status = 'Atenção';
+            }
+
+            const product = products.find(p => p.id === item.productId);
+
+            return {
+                ...item,
+                status,
+                productName: product ? product.name : 'Unknown',
+                sku: product ? product.sku : 'Unknown',
+            };
+        });
+
+        res.json(inventoryWithStatus);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching inventory status', error: error.message });
+    }
 };
 
-/**
- * @route   POST /api/inventory/adjust
- * @desc    Adjust inventory for a product in a warehouse
- * @access  Private (CENTRAL_MANAGER)
- */
-exports.adjustInventory = async (req, res) => {
-  const { productId, warehouseId, newQuantity } = req.body;
-
-  try {
-    const updatedInventoryItem = await prisma.inventory.update({
-      where: {
-        productId_warehouseId: {
-          productId,
-          warehouseId,
-        },
-      },
-      data: {
-        quantity: newQuantity,
-      },
-    });
-
-    res.json(updatedInventoryItem);
-  } catch (error) {
-    console.error(error.message);
-    res.status(500).send('Server error');
-  }
+module.exports = {
+  uploadCsv,
+  getInventoryByWarehouse,
+  getInventoryStatus,
 };

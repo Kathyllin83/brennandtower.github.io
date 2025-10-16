@@ -1,82 +1,48 @@
-# NexusBB - Backend
+# NexusBB Backend
 
-Backend da plataforma de gestão de estoque NexusBB, desenvolvido em Node.js, Express e Prisma.
+This is the backend server for the NexusBB inventory management system. It provides a RESTful API to manage inventory, process CSV uploads, and calculate dashboard metrics.
 
-## Tecnologias Utilizadas
+## Prerequisites
 
-- **Framework**: Express.js
-- **Linguagem**: JavaScript
-- **Banco de Dados**: PostgreSQL
-- **ORM**: Prisma
-- **Autenticação**: JSON Web Tokens (JWT)
-- **Segurança**: bcryptjs para hashing de senhas
+- Node.js (v14 or later)
+- npm
 
-## Guia de Instalação e Execução
+## Installation
 
-Siga os passos abaixo para configurar e executar o projeto em seu ambiente de desenvolvimento.
+1. Clone the repository.
+2. Navigate to the `nexusbb-backend` directory:
+   ```bash
+   cd nexusbb-backend
+   ```
+3. Install the dependencies:
+   ```bash
+   npm install
+   ```
 
-### 1. Clone o Repositório
+## Running the Server
 
-Se você ainda não o fez, clone o projeto para sua máquina local.
+1. To start the server, run the following command:
+   ```bash
+   node server.js
+   ```
+2. The server will start on port 3001 by default. You will see the message:
+   ```
+   Server is running on port 3001
+   ```
 
-### 2. Navegue até o Diretório
+## API Endpoints
 
-```bash
-cd nexusbb-backend
-```
+### Inventory
 
-### 3. Adicione os Arquivos de Dados
+- `GET /api/inventory/:warehouseId`
+  - Retrieves all inventory items for a specific warehouse.
+- `POST /api/inventory/upload`
+  - Uploads a CSV file to update inventory data. The file should be sent as multipart/form-data with the key `file`.
+  - CSV columns: `productCode`, `warehouseName`, `quantity`, `value`, `supplier`.
 
-Este projeto utiliza um script (`seed`) para popular o banco de dados com dados iniciais. Para que funcione, você precisa fornecer os arquivos de dados:
+### Dashboard
 
-- Coloque seus arquivos `dados_hackathon.csv` e `dados_hackathon.xlsx - Sheet1.csv` dentro da pasta `prisma/seeds/`.
-
-### 4. Configure as Variáveis de Ambiente
-
-O projeto precisa de algumas chaves para funcionar, como a conexão com o banco de dados e um segredo para o JWT.
-
-- Copie o arquivo de exemplo `.env.example` para um novo arquivo chamado `.env`.
-  ```bash
-  cp .env.example .env
-  ```
-- Abra o arquivo `.env` e edite as seguintes variáveis:
-  - `DATABASE_URL`: Insira a string de conexão do seu banco de dados PostgreSQL.
-    ```
-    # Exemplo:
-    DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE?schema=public"
-    ```
-  - `JWT_SECRET`: Altere para qualquer chave secreta segura de sua preferência.
-
-### 5. Instale as Dependências
-
-Use o `npm` para instalar todas as dependências listadas no `package.json`.
-
-```bash
-npm install
-```
-
-### 6. Execute as Migrations do Prisma
-
-Este comando irá ler o `schema.prisma` e criar toda a estrutura de tabelas no seu banco de dados.
-
-```bash
-npx prisma migrate dev --name init
-```
-
-### 7. Popule o Banco de Dados (Seed)
-
-Este comando executará o script em `prisma/seeds/seed.js` para popular o banco com os dados dos arquivos CSV.
-
-```bash
-npx prisma db seed
-```
-
-### 8. Inicie o Servidor de Desenvolvimento
-
-Com tudo configurado, inicie o servidor.
-
-```bash
-npm run dev
-```
-
-O servidor será iniciado (normalmente na porta 3000). Você verá a mensagem `Server is running on port 3000` no console e a API estará pronta para receber requisições.
+- `GET /api/dashboard/metrics`
+  - Returns key metrics for the dashboard, including total inventory value, the top product by quantity, and the top warehouse by value.
+- `GET /api/dashboard/central-prediction`
+  - Returns a list of purchase suggestions for the central warehouse based on a weighted average of stock in satellite warehouses.
