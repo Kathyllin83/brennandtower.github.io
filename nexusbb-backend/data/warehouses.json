@@ -1,6 +1,0 @@
-[
-  { "id": "wh-central", "name": "Estoque Central", "city": "Brasilia", "type": "CENTRAL" },
-  { "id": "wh-recife", "name": "Estoque Recife", "city": "Recife", "type": "SATELLITE", "weight": 8 },
-  { "id": "wh-saopaulo", "name": "Estoque Sao Paulo", "city": "Sao Paulo", "type": "SATELLITE", "weight": 10 },
-  { "id": "wh-curitiba", "name": "Estoque Curitiba", "city": "Curitiba", "type": "SATELLITE", "weight": 5 }
-]

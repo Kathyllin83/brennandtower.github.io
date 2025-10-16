@@ -1,9 +1,0 @@
-[
-  { "id": "inv-001", "productId": "prod-001", "warehouseId": "wh-recife", "quantity": 50, "value": 150.99 },
-  { "id": "inv-002", "productId": "prod-001", "warehouseId": "wh-saopaulo", "quantity": 100, "value": 145.50 },
-  { "id": "inv-003", "productId": "prod-002", "warehouseId": "wh-recife", "quantity": 80, "value": 299.00 },
-  { "id": "inv-004", "productId": "prod-001", "warehouseId": "wh-central", "quantity": 20, "value": 140.00 },
-  { "id": "inv-005", "productId": "prod-003", "warehouseId": "wh-central", "quantity": 30, "value": 1200.00 },
-  { "id": "inv-006", "productId": "prod-004", "warehouseId": "wh-curitiba", "quantity": 150, "value": 350.00 },
-  { "id": "inv-007", "productId": "prod-005", "warehouseId": "wh-saopaulo", "quantity": 200, "value": 250.00 }
-]
