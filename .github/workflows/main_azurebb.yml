@@ -1,7 +1,7 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
-name: Build and deploy Node.js app to Azure Web App - azurebb
+name: Build and deploy Node.js app to Azure Web App - brennand-tower
 
 on:
   push:
@@ -12,6 +12,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read #This is required for actions/checkout
 
     steps:
       - uses: actions/checkout@v4
@@ -21,55 +23,43 @@ jobs:
         with:
           node-version: '20.x'
 
-      # AJUSTE: Comandos agora rodam dentro da pasta 'backend'
-      - name: npm install, build, and test
-        working-directory: ./backend
+      - name: npm install, generate, build, and test
+        working-directory: ./backend # Define o diretório para todos os comandos neste passo
         run: |
           npm install
+          npx prisma generate
           npm run build --if-present
-          npm run test --if-present
 
-      # AJUSTE: A remoção também acontece dentro da pasta 'backend'
-      - name: Remove node_modules for artifact
-        working-directory: ./backend
-        run: rm -rf node_modules
-
-      # AJUSTE: Empacota apenas a pasta 'backend' para o artefato
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: ./backend
+          path: ./backend # Empacota apenas a pasta do backend
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
-    environment:
-      name: 'Production'
-      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
-    
     permissions:
-      id-token: write # Required for OIDC
+      id-token: write #This is required for requesting the JWT
+      contents: read #This is required for actions/checkout
 
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
           name: node-app
-          path: .
       
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_132833EB6D264AB38690E601473444F3 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_EC10481905AD4FDA99D5B24746516DB8 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_8FABCBB46EA5454BB9239DA1A288382C }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_B8A0778C53EC41C6A957FA8F01352512 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_E2BE206AF1244CC7AB25398BA9BAD7A6 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_0D1CF7C29B8544C894B83F7A9BB89439 }}
 
       - name: 'Deploy to Azure Web App'
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'azurebb'
+          app-name: 'brennand-tower'
           slot-name: 'Production'
-          # AJUSTE: Aponta para a pasta 'backend' que foi baixada do artefato
-          package: ./backend
+          package: .
