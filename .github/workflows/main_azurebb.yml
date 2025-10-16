@@ -36,7 +36,7 @@ jobs:
         with:
           name: node-app
           # Agora o path '.' aponta para o projeto limpo, sem as dependências
-          path: .
+          path: ./nexusbb-backend
 
   deploy:
     runs-on: ubuntu-latest
@@ -70,3 +70,4 @@ jobs:
           slot-name: 'Production'
           # O pacote '.' agora está correto, pois o artefato baixado não tem node_modules
           package: .
+
