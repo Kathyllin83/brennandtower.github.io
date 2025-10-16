@@ -1,9 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 
 // Importe suas páginas e componentes principais
-// Certifique-se de que esses arquivos existem nas pastas corretas do seu projeto
 import Dashboard from './pages/Dashboard';
 import Stock from './pages/Stock';
 import StockDetail from './pages/StockDetail';
@@ -13,8 +11,7 @@ import NewOrder from './pages/NewOrder';
 import OrderDetail from './pages/OrderDetail';
 import Header from './components/Header';
 
-// --- DADOS MOCKADOS PARA O CHATBOT ---
-// (No futuro, você pode substituir isso por chamadas de API)
+// --- DADOS MOCKADOS ---
 const initialStock = [
     { id: 'prod1', name: 'Cabo Óptico 12 Fibras', quantity: 15, critical: false },
     { id: 'prod2', name: 'Conector SC/APC', quantity: 8, critical: true },
@@ -27,20 +24,19 @@ const mockOrders = [
     { id: 'req3', product: 'Splitter 1x8', quantity: 10, status: 'Pendente' },
 ];
 
+// --- COMPONENTES DO CHATBOT ---
 
-// --- COMPONENTES DO CHATBOT (INTEGRADOS NO APP.JSX) ---
-
-// Ícones SVG para o Chatbot
+// Ícones SVG
 const UserIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg> );
 const SendIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>);
 const ChatbotIconSVG = () => ( <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg> );
 
-// Componentes Visuais do Chatbot
+// Componentes Visuais
 const BotAvatar = () => ( <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0"> N </div> );
 const UserAvatar = () => ( <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 flex-shrink-0"> <UserIcon /> </div> );
 const TypingIndicator = () => ( <div className="flex items-center space-x-2"> <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div> <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse [animation-delay:0.2s]"></div> <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse [animation-delay:0.4s]"></div> </div> );
 
-// Componente do Botão Flutuante
+// Botão Flutuante
 const ChatIconButton = ({ onClick }) => (
     <button
         onClick={onClick}
@@ -129,6 +125,14 @@ const Chatbot = ({ isOpen, onClose, stock, orders, navigate }) => {
         }, 1200);
     };
     
+    // Helper para renderizar texto com negrito
+    const renderText = (text) => {
+        const parts = text.split('**');
+        return parts.map((part, index) => 
+            index % 2 === 1 ? <strong key={index}>{part}</strong> : part
+        );
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -143,7 +147,7 @@ const Chatbot = ({ isOpen, onClose, stock, orders, navigate }) => {
                         <div key={msg.id} className={`flex items-end gap-3 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                             {msg.sender === 'bot' && <BotAvatar />}
                             <div className={`max-w-xs p-3 rounded-2xl ${msg.sender === 'user' ? 'bg-indigo-500 text-white rounded-br-none' : 'bg-gray-100 text-gray-800 rounded-bl-none'}`}>
-                                <div className="whitespace-pre-wrap">{msg.text.split('\n').map((line, index) => <p key={index} className={line.trim() === '' ? 'h-2' : ''}>{line.split(/(\*\*.*?\*\*)/g).map((part, i) => part.startsWith('**') && part.endsWith('**') ? <strong key={i}>{part.slice(2, -2)}</strong> : part)}</p>)}</div>
+                                <div className="whitespace-pre-wrap">{renderText(msg.text)}</div>
                                 {msg.actions && (
                                     <div className="mt-3 border-t pt-2 flex flex-col items-start gap-2">
                                         {msg.actions.map((action, index) => (
@@ -179,13 +183,10 @@ const Chatbot = ({ isOpen, onClose, stock, orders, navigate }) => {
     );
 };
 
-
 // --- COMPONENTE DE GERENCIAMENTO DE ROTAS E ESTADO ---
-// Este componente intermediário é necessário para que possamos usar o hook `useNavigate`
-// e passá-lo como prop para o Chatbot, já que o hook só funciona dentro do contexto do Router.
 function AppContent() {
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const navigate = useNavigate(); // Hook para obter a função de navegação
+  const navigate = useNavigate();
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -210,7 +211,7 @@ function AppContent() {
         onClose={() => setIsChatOpen(false)}
         stock={initialStock}
         orders={mockOrders}
-        navigate={navigate} // Passando a função de navegação para o chatbot
+        navigate={navigate}
       />
     </div>
   );
